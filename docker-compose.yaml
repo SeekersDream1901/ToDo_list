@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+
+  database:
+    image: postgres:alpine
+    volumes:
+      - ToDo_data:/var/lib/postgresql/data
+    env_file: .env
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}
+      timeout: 3s
+      retries: 10
+      interval: 3s
+
+  api:
+    build: .
+    env_file: .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      database:
+        condition: service_healthy
+    volumes:
+      - ./core:/opt/core/
+      - ./ToDo:/opt/ToDo/
+      - django_static:/opt/static/
+
+
+  frontend:
+    image: sermalenk/skypro-front:lesson-35
+    ports:
+      - "80:80"
+    depends_on:
+      api:
+        condition: service_started
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf
+      - django_static:/usr/share/nginx/html/static
+
+
+volumes:
+  ToDo_data:
+  django_static:
